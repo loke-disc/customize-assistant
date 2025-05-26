@@ -1,0 +1,145 @@
+plugins {
+    // Apply the java plugin to add support for Java
+    id 'java'
+
+    // Apply the application plugin to add support for building a CLI application.
+    id 'application'
+    id 'org.springframework.boot' version '2.7.14'
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+}
+
+jar {
+    archiveBaseName.set("customize-assistant")
+}
+
+tasks.named('bootJar') {
+    archiveBaseName.set("customize-assistant")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+}
+
+// @@@SNIPSTART hello-world-project-template-java-gradle-dependencies
+dependencies {
+    implementation group: 'io.temporal', name: 'temporal-sdk', version: '1.22.0'
+    implementation group: 'org.slf4j',  name: 'slf4j-nop', version: '2.0.6'
+    implementation 'org.springframework:spring-context:5.3.29'
+    implementation("org.projectlombok:lombok:1.18.22")
+    annotationProcessor("org.projectlombok:lombok:1.18.22")
+
+    implementation("org.postgresql:postgresql:42.6.0")
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+    implementation("dev.langchain4j:langchain4j-mongodb-atlas:1.0.0-beta1")
+//    implementation('dev.langchain4j:langchain4j-langchain4j-voyage-ai:1.0.0-beta1')
+    implementation('org.mongodb:mongodb-driver-sync:5.4.0')
+
+    implementation("org.springframework.session:spring-session-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
+
+    implementation("dev.langchain4j:langchain4j:0.25.0")
+    implementation('dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.0.1-beta6')
+    implementation("dev.langchain4j:langchain4j-ollama:0.25.0")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("io.projectreactor:reactor-core")
+
+
+    implementation("com.slack.api:bolt:1.38.0")
+    implementation("com.slack.api:bolt-servlet:1.38.0")
+    implementation("com.slack.api:bolt-jetty:1.38.0")
+
+    annotationProcessor("org.springframework:spring-context-indexer")
+
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-jersey")
+    implementation("org.springframework.boot:spring-boot-starter-json")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+    
+    testImplementation group: 'io.temporal', name: 'temporal-testing', version: '1.18.2'
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+    testImplementation group: 'org.mockito', name: 'mockito-core', version: '5.1.1'
+}
+// @@@SNIPEND
+
+application {
+    // Define the main class for the application.
+    mainClass = 'ai.CustomizeAssistantApplication'
+}
+
+task startDiMWorker(type: JavaExec) {
+    mainClass = 'drop_in_moments.DiMWorker'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task createDiMOrder(type: JavaExec) {
+    mainClass = 'drop_in_moments.InitiateDiM'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task updateDiMOrder(type: JavaExec) {
+    mainClass = 'drop_in_moments.UpdateDiM'
+    classpath = sourceSets.main.runtimeClasspath
+    if (project.hasProperty('cliArgs')) {
+        args project.cliArgs.split(',')
+    } else {
+        args 'defaultArg1', 'defaultArg2'
+    }
+}
+
+task sendSignal {
+    doLast {
+        // Create a URLClassLoader using the runtime classpath
+        ClassLoader classLoader = new URLClassLoader(
+                sourceSets.main.runtimeClasspath.collect { it.toURI().toURL() } as URL[],
+                getClass().getClassLoader() // Parent class loader
+        )
+
+        // Load the class using the URLClassLoader
+        def initiateDiMClass = classLoader.loadClass('drop_in_moments.InitiateDiM')
+        def sendSignalMethod = initiateDiMClass.getDeclaredMethod('sendSignal', String.class)
+        def message = project.hasProperty('msg') ? project.getProperty('msg') : "Default message"
+        sendSignalMethod.invoke(null, message)
+    }
+}
+
+task signalWorkflow(type: JavaExec) {
+    group = "Temporal"
+    description = "Sends a signal to a Temporal workflow"
+    onlyIf {
+        project.hasProperty("workflowId")
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "drop_in_moments.WorkflowSignaler"
+    if (project.hasProperty("workflowId")) {
+        args project.getProperty("workflowId")
+    }
+}
+
+task startDiM3Worker(type: JavaExec) {
+    mainClass = 'drop_in_moments_child.DiMWorker'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task createDiM3Order(type: JavaExec) {
+    mainClass = 'drop_in_moments_child.InitiateDiM'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+task signalWorkflow3(type: JavaExec) {
+    group = "Temporal"
+    description = "Sends a signal to a Temporal workflow"
+    onlyIf {
+        project.hasProperty("workflowId")
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "drop_in_moments_child.WorkflowSignaler"
+    if (project.hasProperty("workflowId") && project.hasProperty("taskId") && project.hasProperty("taskStatus")) {
+        args project.getProperty("workflowId"), project.getProperty("taskId"), project.getProperty("taskStatus")
+    }
+}

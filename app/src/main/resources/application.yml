@@ -1,0 +1,48 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://db-duplo.dev.dcitech.cloud:5432/duplo
+    username: duplo_master
+    password: WNvy1JwF9cnlCk8g
+    hikari:
+      maximumPoolSize: 2
+      minimumIdle: 1
+      schema: public
+  data:
+    mongo:
+      uri: mongodb://localhost:27017/admin
+      database: admin
+
+temporal:
+  workflow:
+    task-queue: platform-task-queue
+  namespace: default
+  host: localhost
+  port: 7233
+
+ollama:
+  base-url: "http://localhost:11434"
+  model-default: llama3.2
+  model-code: codellama
+  model-sql: sqlcoder
+  temperature: 0.2
+  max-token: 1000
+
+rag:
+  top-k: 5
+  min-similarity: 0.7
+
+cache:
+  enabled: true
+  successful-queries: true
+
+#slack:
+#  signing-secret: ${SLACK_SIGNING_SECRET}
+#  bot-token: ${SLACK_BOT_TOKEN}
+#  app-token: ${SLACK_APP_TOKEN}
+#  port: 3000
+
+mongodb:
+  uri: "mongodb://localhost:27017/admin"
