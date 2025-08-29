@@ -185,6 +185,6 @@ if __name__ == "__main__":
                 facecolor='white', edgecolor='none')
     plt.savefig('/workspace/building_plan_4400sqft.pdf', bbox_inches='tight', 
                 facecolor='white', edgecolor='none')
-    plt.show()
+    plt.close()  # Close the figure to free memory
     print("Building plan diagram generated successfully!")
     print("Files saved: building_plan_4400sqft.png and building_plan_4400sqft.pdf")
